@@ -1,0 +1,11 @@
+(rule
+    (target CMakeCache.txt)
+    (deps ../bintra/CMakeLists.txt ../bintra/main.cpp)
+    (action (run
+        cmake -S ../bintra -B . -DCMAKE_BUILD_TYPE:STRING=Debug)))
+
+(rule
+    (target bintra)
+    (deps ../bintra/main.cpp CMakeCache.txt)
+    (action (run
+        cmake --build .)))
