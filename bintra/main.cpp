@@ -10,6 +10,17 @@
 #define ElfW(type) Elf32_ ## type
 #endif
 
+#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
+#define BYTE_TO_BINARY(byte)  \
+((byte) & 0x80 ? '1' : '0'), \
+    ((byte) & 0x40 ? '1' : '0'), \
+    ((byte) & 0x20 ? '1' : '0'), \
+    ((byte) & 0x10 ? '1' : '0'), \
+    ((byte) & 0x08 ? '1' : '0'), \
+    ((byte) & 0x04 ? '1' : '0'), \
+    ((byte) & 0x02 ? '1' : '0'), \
+                                ((byte) & 0x01 ? '1' : '0')
+
 void* elf_data = nullptr;
 uint32_t sec_text_offset = 0;
 uint32_t exec_header_offset = 0;
@@ -94,8 +105,38 @@ bool read_elf_header(const char* elfFile) {
 void work_text_section() {
     char* code = (char*)(elf_data + sec_text_offset +sizeof(Elf32_Phdr) + sizeof(Elf32_Ehdr));
     code = (char*)(elf_data  + 0x74);
-    for (int i=0; i<16; i++) {
-        printf("0x%x ", 0xFF & code[i]);
+    for (int i=0; i<10; i+=4) {
+        printf("0x%x 0x%x 0x%x 0x%x\n", 0xFF & code[i], 0xFF & code[i+1], 0xFF & code[i+2], 0xFF & code[i+3]);
+        uint32_t mnem = (0xFF & code[i]);
+        mnem += (0xFF & code[i+1]) << 8;
+        mnem += (0xFF & code[i+2]) << 16;
+        mnem += ((0xFF & code[i+3]) << 24);
+        uint8_t opcode = (mnem >> 21) & 0xF;
+        printf("opcode = %d\n", opcode);
+//        printf(BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN"\n",
+//               BYTE_TO_BINARY(0xFF & code[i+3]),
+//               BYTE_TO_BINARY(0xFF & code[i+2]),
+//               BYTE_TO_BINARY(0xFF & code[i+1]),
+//               BYTE_TO_BINARY(0xFF & code[i]) );
+
+        printf(BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN"\n",
+               BYTE_TO_BINARY(0xFF & mnem >> 24),
+               BYTE_TO_BINARY(0xFF & mnem >> 16),
+               BYTE_TO_BINARY(0xFF & mnem >> 8),
+               BYTE_TO_BINARY(0xFF & mnem ) );
+
+        switch (opcode) {
+        case 0b1101:
+            printf("MOV\n");
+            break;
+        default:
+            fprintf(stdout, "Bad opcode %d\n", opcode);
+//            fflush(std);
+            exit(1);
+        }
+
+        // printf("opcode = %d", opcode);
+        // printf("0x%x\n", mnem);
     }
     printf("\n");
 }
