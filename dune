@@ -1,0 +1,28 @@
+(cram (deps
+    cmake_build/bintra
+    ./fac2.exe
+    ))
+
+(rule
+    (target fac.exe)
+    (deps fac.S)
+    (action (run
+        arm-linux-gnueabi-gcc
+        -static -march=armv7-a
+        fac.S -o fac.exe
+        )))
+
+(rule
+    (target fac2.exe)
+    (deps fac2.S)
+    (action
+      (progn
+      (run
+        arm-linux-gnueabi-as
+        -march=armv7-a
+        %{deps} -o temp.o)
+        (run
+          arm-linux-gnueabi-ld
+          ;-march=armv7-a
+          -s temp.o -o %{target})
+    )))
