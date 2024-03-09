@@ -63,7 +63,7 @@ bool read_elf_header(const char* elfFile) {
 
 
     for (size_t i=0; i< header->e_phnum; i++) {
-        size_t offset = i*sizeof(Elf32_Phdr);
+        size_t offset = i * sizeof(Elf32_Phdr);
         char* offsetptr = (char*)elf_data + header->e_phoff + offset;
         Elf32_Phdr* h = (Elf32_Phdr*) (offsetptr);
         printf("Header %lu\n", i);
@@ -74,8 +74,8 @@ bool read_elf_header(const char* elfFile) {
 
     uint32_t sec_offset = header->e_shoff;
     char* section_names = 0;
-    for (size_t i=0; i<header->e_shnum; i++) {
-        char* offsetptr = (char*)elf_data+sec_offset+ i*sizeof(Elf32_Shdr);
+    for (size_t i = 0; i<header->e_shnum; i++) {
+        char* offsetptr = (char*)elf_data + sec_offset + i*sizeof(Elf32_Shdr);
         Elf32_Shdr* sheader = (Elf32_Shdr*) (offsetptr);
         if (sheader->sh_type == SHT_STRTAB) {
             section_names = offsetptr + sizeof(Elf32_Shdr);
