@@ -1,5 +1,5 @@
-#include <QCoreApplication>
-
+//#include <QCoreApplication>
+#include <stdlib.h>
 #include <elf.h>
 #include <stdio.h>
 #include <string.h>
@@ -21,7 +21,7 @@
     ((byte) & 0x02 ? '1' : '0'), \
                                 ((byte) & 0x01 ? '1' : '0')
 
-void* elf_data = nullptr;
+uint8_t* elf_data = nullptr;
 uint32_t sec_text_offset = 0;
 uint32_t exec_header_offset = 0;
 
@@ -37,7 +37,7 @@ bool read_elf_header(const char* elfFile) {
     long size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
-    elf_data = malloc(size);
+    elf_data = (uint8_t*)malloc(size);
     fread(elf_data, 1, size, fp);
     fclose(fp);
         // read the header
@@ -66,7 +66,7 @@ bool read_elf_header(const char* elfFile) {
         size_t offset = i*sizeof(Elf32_Phdr);
         char* offsetptr = (char*)elf_data + header->e_phoff + offset;
         Elf32_Phdr* h = (Elf32_Phdr*) (offsetptr);
-        printf("Header %u\n", i);
+        printf("Header %lu\n", i);
         printf(" is_exec %b\n", h->p_flags & PF_X);
         printf(" offset %X\n", h->p_offset);
     }
@@ -105,38 +105,46 @@ bool read_elf_header(const char* elfFile) {
 void work_text_section() {
     char* code = (char*)(elf_data + sec_text_offset +sizeof(Elf32_Phdr) + sizeof(Elf32_Ehdr));
     code = (char*)(elf_data  + 0x74);
-    for (int i=0; i<10; i+=4) {
+    for (int i=0; i<64; i+=4) {
         printf("0x%x 0x%x 0x%x 0x%x\n", 0xFF & code[i], 0xFF & code[i+1], 0xFF & code[i+2], 0xFF & code[i+3]);
         uint32_t mnem = (0xFF & code[i]);
         mnem += (0xFF & code[i+1]) << 8;
         mnem += (0xFF & code[i+2]) << 16;
         mnem += ((0xFF & code[i+3]) << 24);
-        uint8_t opcode = (mnem >> 21) & 0xF;
-        printf("opcode = %d\n", opcode);
+//        uint8_t opcode = (mnem >> 21) & 0xF;
+//        printf("opcode = %d\n", opcode);
 //        printf(BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN"\n",
 //               BYTE_TO_BINARY(0xFF & code[i+3]),
 //               BYTE_TO_BINARY(0xFF & code[i+2]),
 //               BYTE_TO_BINARY(0xFF & code[i+1]),
 //               BYTE_TO_BINARY(0xFF & code[i]) );
 
-        printf(BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN"\n",
-               BYTE_TO_BINARY(0xFF & mnem >> 24),
-               BYTE_TO_BINARY(0xFF & mnem >> 16),
-               BYTE_TO_BINARY(0xFF & mnem >> 8),
-               BYTE_TO_BINARY(0xFF & mnem ) );
+//        printf(BYTE_TO_BINARY_PATTERN " " BYTE_TO_BINARY_PATTERN " " BYTE_TO_BINARY_PATTERN " " BYTE_TO_BINARY_PATTERN"\n",
+//               BYTE_TO_BINARY(0xFF & mnem >> 24),
+//               BYTE_TO_BINARY(0xFF & mnem >> 16),
+//               BYTE_TO_BINARY(0xFF & mnem >> 8),
+//               BYTE_TO_BINARY(0xFF & mnem ) );
 
-        switch (opcode) {
-        case 0b1101:
+        if ( ((mnem >> 22) & 0b111111) == 0) {
+            printf("MULtiply\n");
+        } else if ( ((mnem >> 21) & 0b1101111) == 0b0001101) {
             printf("MOV\n");
-            break;
-        default:
-            fprintf(stdout, "Bad opcode %d\n", opcode);
-//            fflush(std);
+        } else if ( ((mnem >> 21) & 0b1101111) == 0b0000010) {
+            printf("SUB\n");
+        } else if ( ((mnem >> 25) & 0b111) == 0b101) {
+            printf("Branch\n");
+        } else if ( ((mnem >> 26) & 0b11) == 0b01) {
+            printf("Single Data Transfer\n");
+        } else {
+            printf("Bad opcode:\n");
+            printf(BYTE_TO_BINARY_PATTERN " " BYTE_TO_BINARY_PATTERN " " BYTE_TO_BINARY_PATTERN " " BYTE_TO_BINARY_PATTERN"\n",
+                    BYTE_TO_BINARY(0xFF & mnem >> 24),
+                    BYTE_TO_BINARY(0xFF & mnem >> 16),
+                    BYTE_TO_BINARY(0xFF & mnem >> 8),
+                    BYTE_TO_BINARY(0xFF & mnem ));
+            fflush(stdout);
             exit(1);
         }
-
-        // printf("opcode = %d", opcode);
-        // printf("0x%x\n", mnem);
     }
     printf("\n");
 }
